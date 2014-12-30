@@ -17,59 +17,54 @@ void printListData(Node *source)
     } while (node);
 }
 
+typedef int TAction(int);
 
-Node *copyList(Node *head)
+int test_act_add100(int a){ return a+100; };
+int test_act_add100(int a){ return a+1000; };
+int act_none(int x){ return x; }
+Node *copyList(Node *head, TAction *act )
 {
     static Node * first=NULL;
 
-    static Node ** newcupls[10];
-    static Node * future_update[10];
+    static Node * newcupls[10][2];
 
-    static int future_current=0;
-    static int future_update_top=0;
+    static int cupls_counter=0;
 
-//    if(!newcupls) newcupls = malloc(sizeof(Node*)*10);
-//    if(!future_update) future_update = malloc(sizeof(Node)*10);
 
     Node * cur = malloc(sizeof(Node));
-//    Node * bak;
-//    Node * old_next;
-    newcupls[future_current] = malloc(sizeof(Node)*2);
-    newcupls[future_current][0] = head;
-    newcupls[future_current][1] = cur;
-    future_current++;
+    Node * old_next;
+
+//    newcupls[cupls_counter] = malloc(sizeof(Node)*2);
     if( !first ) first = cur;
-    cur->data = head->data+100;
-    
+    if(!act) act = act_none;
+    cur->data = (*act)(head->data);
+
     //cur->random = malloc(sizeof(Node*) * 2);
     printf(" copied %d ", cur->data);
-    //old_next = head->next;
-    cur->random = NULL;//head->random;
-    for(int i=0;i<future_current; i++){
-        if( head->random == newcupls[future_current][0] ){
-            cur->random = newcupls[future_current][1];
-            printf("random was to prev: %d", cur->random->data);
+    old_next = head->next;
+    cur->random = (Node *)newcupls[cupls_counter];
+    newcupls[cupls_counter][0] = head->random;
+    newcupls[cupls_counter][1] = NULL;
+    cupls_counter++;
+    head->next = cur;
+    if( old_next ){
+//        printf(" next...\n");
+        cur->next = copyList( old_next, act );
+//        if( cur->next ) printf(" next is %d\t", cur->next->data);
+
+        if( !((Node **)cur->random)[1] ){ // have never be here
+            ((Node **)cur->random)[1] = ((Node **)cur->random)[0]->next;
+            printf(" !!! ");
         }
-    }
-    if(!cur->random){
-        future_update[future_update_top] = cur;
-        future_update_top++;
-    }
-    if( head->next ){
-        printf(" next...\n");
-        cur->next = copyList( head->next );
-        if( cur->next ) printf(" next is %d\n", cur->next->data);
+        cur->random = ((Node **)cur->random)[1];
+        //printf("random-> %d\n", cur->random->data );
+
+        head->next = old_next; // restore pointer in old chain
     }else{
-        printf("\n---\n");
-/*
-        bak = first;
-        while( bak ){
-            printf("<<<\t new:%d rand(to old)%d rand-new:%p next-new:%p", bak->data, bak->random->data, bak->random->next, bak->next);
-            printf("\t\t %d\n", bak->random->next->data);
-            //bak->random = bak->random->next;
-            bak = bak->next;
+        //printf("\n--- top ---\n");
+        for( int i=0;i<cupls_counter ; i++){
+            newcupls[i][1] = newcupls[i][0]->next; // here next is pointer to a node in the new chain
         }
-*/
     }
     return cur;
 }
@@ -98,8 +93,11 @@ int main()
     Node *node = &sourceArray[0];
     printListData(node);
     
-    Node *newList = copyList(node);
+    Node *newList = copyList(node, test_act_add100);
     printf("\nPRINT NEW LIST DATA %p\n", newList);
-//    printListData(newList);
+    printListData(newList);
+    Node *newList2 = copyList(newList, test_act_add100);
+    printf("\nOLD LIST\n");
+    printListData(newList2);
     return 0;
 }
