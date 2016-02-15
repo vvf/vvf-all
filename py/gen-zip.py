@@ -4,16 +4,8 @@ import uuid
 import zipfile
 import random
 import string
-
-xml_tpl='''<root>
-    <var name="id" value="{guid}"/>
-    <var name="level" value="{level}"/>
-    <objects>
-        {objects}
-    </objects>
-</root>
-'''
-xml_object_tpl = '<object name="{}"/>'
+from lxml import etree
+from lxml.builder import E
 
 MAX_LEVEL = 100
 MIN_LEVEL = 1
@@ -30,12 +22,14 @@ def get_random_string(minlen=10, maxlen=50):
     return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(length))
 
 def get_xml_string():
-    tpl_data={
-        "guid": uuid.uuid4().hex,
-        "level": random.randint(MIN_LEVEL, MAX_LEVEL),
-        "objects": '\n        '.join(xml_object_tpl.format(get_random_string()) for i in range(random.randint(1, MAX_OBJECTS_NUMBER)))
-    }
-    return xml_tpl.format(**tpl_data)
+    xml = E.root(
+        E.var(name="id", value=uuid.uuid4().hex),
+        E.var(name="level", value=str(random.randint(MIN_LEVEL, MAX_LEVEL))),
+        E.objects(
+            *[E.object(name=get_random_string()) for i in range(random.randint(1, MAX_OBJECTS_NUMBER))]
+        )
+    )
+    return etree.tostring(xml, pretty_print=True)
 
 
 def create_zip_file(filename):
